@@ -1,0 +1,27 @@
+---
+
+- name: Include MongoDB Config Task
+  include_tasks: "mongodb-config.yml"
+  tags: [always]
+
+- name: Include MongoDB Certificates Task
+  include_tasks: mongodb-certs.yml
+  when: mongodb_tls_mode is defined and mongodb_tls_mode != "disabled"
+  tags: [always]
+
+- name: Include MongoDB Installation Task
+  include_tasks: "mongodb-{{ mongodb_installation_type }}.yml"
+  tags: [always]
+
+- name: Include MongoDB Master Task
+  include_tasks: mongodb-master-task.yml
+  when: mongo_node_role is defined and mongo_node_role == "master"
+  tags: [always]
+
+- name: Include MongoDB ReplicaSet Task
+  include_tasks: mongodb-replicaset-task.yml
+  when:
+    - mongo_node_role is defined and mongo_node_role == "master"
+    - mongodb_replica_set_name is defined and mongodb_replica_set_name != ""
+    - mongodb_security is defined and mongodb_security == "enabled"
+  tags: [always]

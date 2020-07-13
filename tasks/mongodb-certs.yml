@@ -1,0 +1,92 @@
+---
+
+- name: MANGODB CERTS TASK | Copy the Root CA Certificate and Key
+  copy:
+    content: "{{ item.src | b64decode }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ mongodb_owner }}"
+    group: "{{ mongodb_group }}"
+    mode: "0600"
+  with_items:
+    - { src: "{{ mongodb_root_ca_cert_base64 }}", dest: "{{ mongodb_certs_host_dir }}/{{ mongodb_root_ca_cert_name }}" }
+    - { src: "{{ mongodb_root_ca_key_base64 }}", dest: "{{ mongodb_certs_host_dir }}/{{ mongodb_root_ca_key_name }}" }
+  no_log: true
+
+- name: MANGODB CERTS TASK | Generate a Private Key
+  openssl_privatekey:
+    path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_key_name }}"
+    owner: "{{ mongodb_owner }}"
+    group: "{{ mongodb_group }}"
+    mode: "0400"
+    type: RSA
+    size: "4096"
+  notify:
+    - "restart_mongodb_docker_auth"
+    - "restart_mongodb_docker_no_auth" 
+    - "restart_mongodb_host_auth"
+    - "restart_mongodb_host_no_auth"
+
+- name: MANGODB CERTS TASK | Generate a Certificate Request
+  openssl_csr:
+    path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_csr_name }}"
+    owner: "{{ mongodb_owner }}"
+    group: "{{ mongodb_group }}"
+    privatekey_path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_key_name }}"
+    common_name: "{{ mongodb_openssl_csr['common_name'] }}"
+    country_name: "{{ mongodb_openssl_csr['country_name'] }}"
+    state_or_province_name: "{{ mongodb_openssl_csr['state_or_province_name'] }}"
+    locality_name: "{{ mongodb_openssl_csr['locality_name'] }}"
+    organizational_unit_name: "{{ mongodb_openssl_csr['organizational_unit_name'] }}"
+    organization_name: "{{ mongodb_openssl_csr['organization_name'] }}"
+    email_address: "{{ mongodb_openssl_csr['email_address'] }}"
+    subject_alt_name: "{{ mongodb_openssl_csr['subject_alt_name'] }}"
+
+- name: MANGODB CERTS TASK | Generate a Certificate and Sign It with the Root CA
+  openssl_certificate:
+    path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_cert_name }}"
+    owner: "{{ mongodb_owner }}"
+    group: "{{ mongodb_group }}"
+    mode: "0400"
+    privatekey_path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_key_name }}"
+    csr_path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_csr_name }}"
+    ownca_path: "{{ mongodb_certs_host_dir }}/{{ mongodb_root_ca_cert_name }}"
+    ownca_privatekey_path: "{{ mongodb_certs_host_dir }}/{{ mongodb_root_ca_key_name }}"
+    provider: ownca
+  notify:
+    - "restart_mongodb_docker_auth"
+    - "restart_mongodb_docker_no_auth" 
+    - "restart_mongodb_host_auth"
+    - "restart_mongodb_host_no_auth"
+
+- name: MANGODB CERTS TASK | Delete the Root CA Key for Security Reasons
+  file:
+    path: "{{ mongodb_certs_host_dir }}/{{ mongodb_root_ca_key_name }}"
+    state: absent
+
+- name: MANGODB CERTS TASK | Slurp the Node's Certificate
+  slurp:
+    path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_cert_name }}"
+  register: mongodb_node_cert_content
+
+- name: MANGODB CERTS TASK | Slurp the Node's Key
+  slurp:
+    path: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_key_name }}"
+  register: mongodb_node_key_content
+
+- name: MANGODB CERTS TASK | Put the Node's Certificate and Key into Varaiables
+  set_fact:
+    mongodb_node_cert: "{{ mongodb_node_cert_content.content | b64decode }}"
+    mongodb_node_key: "{{ mongodb_node_key_content.content | b64decode }}"
+
+- name: MANGODB CERTS TASK | Merge the Node's Certificate and Key into One File for MongoDB
+  template:
+    src: "{{ mongodb_node_cert_key_template }}"
+    dest: "{{ mongodb_certs_host_dir }}/{{ mongodb_node_cert_key_name }}"
+    owner: "{{ mongodb_owner }}"
+    group: "{{ mongodb_group }}"
+    mode: "0400"
+  notify:
+    - "restart_mongodb_docker_auth"
+    - "restart_mongodb_docker_no_auth" 
+    - "restart_mongodb_host_auth"
+    - "restart_mongodb_host_no_auth"

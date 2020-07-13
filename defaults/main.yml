@@ -1,0 +1,146 @@
+---
+
+mongodb_installation_type: "docker"        # Available options: docker
+
+mongodb_main_mount_dir: "/srv"
+
+mongodb_disk_mounts: []
+
+mongodb_owner: "999"
+mongodb_group: "999"
+mongodb_bind_port: "27017"
+mongodb_bind_ip: "0.0.0.0"
+mongodb_host_port: "{{ mongodb_bind_port }}"
+mongodb_host_ip: "{{ mongodb_bind_ip }}"
+mongodb_login_host: "127.0.0.1"
+mongodb_login_port: "{{ mongodb_host_port }}"
+
+# MONGODB FILES AND DIRECTORIES
+mongodb_main_host_dir: "{{ mongodb_main_mount_dir }}/mongodb"
+mongodb_config_host_dir: "{{ mongodb_main_host_dir }}/config"
+mongodb_certs_host_dir: "{{ mongodb_main_host_dir }}/certificates"
+mongodb_data_host_dir: "{{ mongodb_main_host_dir }}/db"
+mongodb_secrets_host_dir: "{{ mongodb_main_host_dir }}/secrets"
+
+mongodb_main_container_dir: "/data"
+mongodb_global_config_container_dir: "/etc/mongodb"
+mongodb_config_container_dir: "{{ mongodb_global_config_container_dir }}/config"
+mongodb_certs_container_dir: "{{ mongodb_global_config_container_dir }}/certificates"
+mongodb_data_container_dir: "{{ mongodb_main_container_dir }}/db"
+mongodb_secrets_container_dir: "{{ mongodb_global_config_container_dir }}/secrets"
+
+mongodb_main_config: "mongod.conf"
+mongodb_internode_keyfile: "internode-keyfile"
+
+mongodb_directories: [
+    {
+      host_dir: "{{ mongodb_main_host_dir }}",
+      container_dir: "{{ mongodb_main_container_dir }}",
+      owner: "{{ mongodb_owner }}",
+      group: "{{ mongodb_group }}",
+      mode: "0755"
+    },
+    {
+      host_dir: "{{ mongodb_config_host_dir }}",
+      container_dir: "{{ mongodb_config_container_dir }}",
+      owner: "{{ mongodb_owner }}",
+      group: "{{ mongodb_group }}",
+      mode: "0755"
+    },
+    {
+      host_dir: "{{ mongodb_data_host_dir }}",
+      container_dir: "{{ mongodb_data_container_dir }}",
+      owner: "{{ mongodb_owner }}",
+      group: "{{ mongodb_group }}",
+      mode: "0755"
+    },
+    {
+      host_dir: "{{ mongodb_secrets_host_dir }}",
+      container_dir: "{{ mongodb_secrets_container_dir }}",
+      owner: "{{ mongodb_owner }}",
+      group: "{{ mongodb_group }}",
+      mode: "0755"
+    },
+    {
+      host_dir: "{{ mongodb_certs_host_dir }}",
+      container_dir: "{{ mongodb_certs_container_dir }}",
+      owner: "{{ mongodb_owner }}",
+      group: "{{ mongodb_group }}",
+      mode: "0755"
+    }
+]
+
+mongodb_files: [
+    {
+      src: "mongodb/config/{{ mongodb_main_config }}.j2",
+      dest: "{{ mongodb_config_host_dir }}/{{ mongodb_main_config }}",
+      owner: "{{ mongodb_owner }}",
+      group: "{{ mongodb_group }}",
+      mode: "0600"
+    },
+    {
+      src: "mongodb/secrets/{{ mongodb_internode_keyfile }}.j2",
+      dest: "{{ mongodb_secrets_host_dir }}/{{ mongodb_internode_keyfile }}",
+      owner: "{{ mongodb_owner }}",
+      group: "{{ mongodb_group }}",
+      mode: "0600"
+    }
+]
+
+# SSL CERTIFICATES
+mongodb_root_ca_cert_name: "ca.crt"
+mongodb_root_ca_key_name: "ca.key"
+mongodb_node_csr_name: "{{ inventory_hostname }}.csr"
+mongodb_node_cert_name: "{{ inventory_hostname }}.crt"
+mongodb_node_key_name: "{{ inventory_hostname }}.key"
+mongodb_node_cert_key_template: "mongodb/certificates/mongodb_node_cert_key.pem.j2"
+mongodb_node_cert_key_name: "{{ inventory_hostname }}.pem"
+
+# Shell command for generating a Root CA and key: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out root-ca.pem -days 3650 -nodes -subj "/C=US/ST=NY/L=NewYork/O=MyOrganization/OU=IT/CN=mongodb.local/emailAddress=admin@mongodb.local"
+
+mongodb_openssl_csr:
+  common_name: "mongodb.local"
+  country_name: "US"
+  state_or_province_name: "NY"
+  locality_name: "NY"
+  organizational_unit_name: "IT"
+  organization_name: "MyOrganization"
+  email_address: "admin@mongodb.local"
+  subject_alt_name:
+    - "DNS:{{ mongodb_node_dns_name | default(inventory_hostname) }}"
+    - "IP:{{ ansible_host }}"
+
+
+mongodb_version: "4.2"
+mongodb_docker_network: "mongodb"
+mongodb_engine: "wiredTiger"        # wiredTiger / inMemory
+# disabled / allowTLS / preferTLS / requireTLS
+mongodb_tls_mode: "preferTLS"    # Connections between servers use TLS. For incoming connections, the server accepts both TLS and non-TLS
+mongodb_security: "enabled"
+mongodb_command: "--config {{ mongodb_config_container_dir }}/{{ mongodb_main_config }}"
+
+# MONGODB REPLICASET
+mongodb_replica_set_name: "mongodb"        # define the 'mongodb_replica_set_name' to run MongoDB as a replicaSet
+mongodb_replica_set_use_dns: false
+#mongodb_node_dns_name: ""        # feel free to set this variable in your 'vars' file or 'inventory' file
+
+mongodb_config:
+  global:
+    major_version: "{{ mongodb_version.split('.')[0] }}"
+    status_check_retries: "20"  # a number of retries when checking the node status
+    status_check_delay: "15"    # a delay in seconds when checking the node status
+  docker_opts:
+    container_name: "mongodb"
+    image_name: "mongo"
+    image_tag: "{{ mongodb_version }}"
+    command: "{{ mongodb_command | default(omit) }}"
+    ports: "{{ mongodb_host_ip }}:{{ mongodb_host_port }}:{{ mongodb_bind_port }}"
+    env_vars: "{{ mongodb_env_vars | default(omit) }}"
+    volumes:
+      - "{{ mongodb_data_host_dir }}:{{ mongodb_data_container_dir }}"
+      - "{{ mongodb_config_host_dir }}:{{ mongodb_config_container_dir }}"
+      - "{{ mongodb_secrets_host_dir }}:{{ mongodb_secrets_container_dir }}"
+      - "{{ mongodb_certs_host_dir }}:{{ mongodb_certs_container_dir }}"
+    hostname: "{{ mongodb_node_dns_name | default(omit) }}"
+    networks:
+      - name: "{{ mongodb_docker_network }}"

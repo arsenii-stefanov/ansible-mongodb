@@ -1,0 +1,96 @@
+---
+
+- name: MONGODB MASTER TASK | Check if the Admin User Exists
+  mongodb_user:
+    database: admin
+    login_host: "{{ mongodb_login_host }}"
+    login_port: "{{ mongodb_login_port }}"
+    login_user: "{{ mongodb_secret_vars['admin_user'] }}"
+    login_password: "{{ mongodb_secret_vars['admin_password'] }}"
+    user: "{{ mongodb_secret_vars['admin_user'] }}"
+    password: "{{ mongodb_secret_vars['admin_password'] }}"
+    roles:
+      - db: "admin"
+        role: "root"
+    state: present
+  changed_when: false
+  register: mongodb_check_admin_user
+  ignore_errors: true
+  no_log: true
+  when: mongodb_security is defined and mongodb_security == "enabled"
+
+- debug:
+    msg: "ENABLING SAFE MODE"
+  when: 
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_check_admin_user is failed
+
+- name: MONGODB MASTER TASK | Tell Ansible Handlers and Subtasks that SafeMode Is Enabled
+  set_fact:
+    mongodb_safe_mode: true
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_check_admin_user is failed
+
+- name: MONGODB MASTER TASK | Disable Security Prior to Creating the Admin User
+  # import_tasks (static) from {{ role_path }}/tasks ; include_tasks (dynamic) - searches in {{ playbook_dir }}
+  import_tasks: "mongodb-config.yml"
+  when: 
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_check_admin_user is failed
+
+- name: MONGODB MASTER TASK | Restart MongoDB
+  meta: flush_handlers
+
+- name: MONGODB MASTER TASK | Create the Admin User
+  mongodb_user:
+    login_host: "{{ mongodb_login_host }}"
+    login_port: "{{ mongodb_login_port }}"
+    database: admin
+    user: "{{ mongodb_secret_vars['admin_user'] }}"
+    password: "{{ mongodb_secret_vars['admin_password'] }}"
+    roles:
+      - db: "admin"
+        role: "root"
+    state: present
+  no_log: true
+  when: 
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_check_admin_user is failed
+
+- debug:
+    msg: "DISABLING SAFE MODE"
+  when: 
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_check_admin_user is failed
+
+- name: MONGODB MASTER TASK | Tell Ansible Handlers and Subtasks that SafeMode Is Disabled
+  set_fact: 
+    mongodb_safe_mode: false
+  when: 
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_check_admin_user is failed
+
+- name: MONGODB MASTER TASK | Enable Security After the Admin User Is Created
+  import_tasks: "mongodb-config.yml"
+  when: 
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_check_admin_user is failed
+
+- name: MONGODB MASTER | Restart MongoDB
+  meta: flush_handlers
+
+- name: MONGODB MASTER TASK | Create Users
+  mongodb_user:
+    database: "{{ item.database }}"
+    login_host: "{{ mongodb_login_host }}"
+    login_port: "{{ mongodb_login_port }}"
+    login_user: "{{ mongodb_secret_vars['admin_user'] }}"
+    login_password: "{{ mongodb_secret_vars['admin_password'] }}"
+    user: "{{ item.user }}"
+    password: "{{ item.password }}"
+    roles: "{{ item.roles }}"
+    state: present
+  no_log: true
+  changed_when: false
+  with_items: "{{ mongodb_users }}"

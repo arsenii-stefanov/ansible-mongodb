@@ -1,0 +1,35 @@
+######################################
+###                                ###
+###       MANAGED BY ANSIBLE       ###
+###     (DO NOT EDIT MANUALLY)     ###
+###                                ###
+######################################
+
+# https://docs.mongodb.com/manual/reference/configuration-options/#systemlog-options
+
+storage:
+  dbPath: {{ mongodb_data_container_dir }}
+  engine: {{ mongodb_engine }}
+  journal:
+    enabled: true
+net:
+  port: {{ mongodb_bind_port }}
+  bindIp: {{ mongodb_bind_ip }}
+  tls:
+    mode: {{ mongodb_tls_mode }}
+    certificateKeyFile: {{ mongodb_certs_container_dir }}/{{ mongodb_node_cert_key_name }}
+    CAFile: {{ mongodb_certs_container_dir }}/{{ mongodb_root_ca_cert_name }}
+    allowConnectionsWithoutCertificates: true
+processManagement:
+  timeZoneInfo: /usr/share/zoneinfo
+operationProfiling:
+  mode: slowOp
+  slowOpThresholdMs: 50
+{% if ((mongodb_safe_mode is defined and mongodb_safe_mode == False) or (mongodb_safe_mode is not defined)) and (mongodb_security is defined and mongodb_security == "enabled") %}
+security:
+  authorization: {{ mongodb_security }}
+  clusterAuthMode: keyFile
+  keyFile: {{ mongodb_secrets_container_dir }}/{{ mongodb_internode_keyfile }}
+replication:
+  replSetName: {{ mongodb_replica_set_name }}
+{% endif %}

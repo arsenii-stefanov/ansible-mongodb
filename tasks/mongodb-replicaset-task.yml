@@ -1,0 +1,27 @@
+---
+
+- name: MONGODB REPLICASET TASK | Get the List of All Node IPs in the ReplicaSet
+  set_fact:
+    # List 'hostvars' for all hosts in this play and get their 'ansible_host' 
+    mongodb_node_list: "{{ ansible_play_hosts_all | map('extract', hostvars, ['ansible_host']) | map('regex_replace', '(.*)', '\\1:{{ mongodb_host_port }}') | list }}"
+  when: (mongodb_replica_set_use_dns is defined and mongodb_replica_set_use_dns == false) or (mongodb_replica_set_use_dns is not defined)
+
+- name: MONGODB REPLICASET TASK | Get the List of All Node DNS Names in the ReplicaSet
+  set_fact:
+    # List 'hostvars' for all hosts in this play and get their 'mongodb_node_dns_name'
+    mongodb_node_list: "{{ ansible_play_hosts_all | map('extract', hostvars, ['mongodb_node_dns_name']) | map('regex_replace', '(.*)', '\\1:{{ mongodb_host_port }}') | list }}"
+  when: mongodb_replica_set_use_dns is defined and mongodb_replica_set_use_dns == true
+
+- name: MONGODB REPLICASET TASK | List All Nodes in the ReplicaSet
+  debug:
+    msg: "{{ mongodb_node_list }}"
+
+- name: MONGODB REPLICASET TASK | Initiate the ReplicaSet
+  mongodb_replicaset:
+    login_host: "{{ mongodb_login_host }}"
+    login_port: "{{ mongodb_login_port }}"
+    login_user: "{{ mongodb_secret_vars['admin_user'] | default(omit) }}"
+    login_password: "{{ mongodb_secret_vars['admin_password'] | default(omit) }}"
+    replica_set: "{{ mongodb_replica_set_name }}"
+    validate: true
+    members: "{{ mongodb_node_list }}"

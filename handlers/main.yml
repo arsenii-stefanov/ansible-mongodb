@@ -1,0 +1,97 @@
+---
+
+######################
+###     DOCKER     ###
+######################
+- name: restart_mongodb_docker_auth
+  shell: "docker restart {{ mongodb_config['docker_opts']['container_name'] }}"
+  notify: "ping_mongodb_docker_auth"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - (mongodb_safe_mode is defined and mongodb_safe_mode == false) or (mongodb_safe_mode is not defined)
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+- name: restart_mongodb_docker_no_auth
+  shell: "docker restart {{ mongodb_config['docker_opts']['container_name'] }}"
+  notify: "ping_mongodb_docker_no_auth"
+  when:
+    - (mongodb_security is defined and mongodb_security == "disabled") or (mongodb_security is not defined) or (mongodb_safe_mode is defined and mongodb_safe_mode == true)
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+- name: ping_mongodb_docker_auth
+  shell: "docker exec -i {{ mongodb_config['docker_opts']['container_name'] }} mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"db.runCommand('ping').ok\""
+  register: mongodb_ping_result
+  until: mongodb_ping_result.stdout == "1"
+  retries: "{{ mongodb_config['global']['status_check_retries'] }}"
+  delay: "{{ mongodb_config['global']['status_check_delay'] }}"
+  when:
+    - mongo_node_role is defined and mongo_node_role == "master"
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - (mongodb_safe_mode is defined and mongodb_safe_mode == false) or (mongodb_safe_mode is not defined)
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+- name: ping_mongodb_docker_no_auth
+  shell: "docker exec -i {{ mongodb_config['docker_opts']['container_name'] }} mongo --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"db.runCommand('ping').ok\""
+  register: mongodb_ping_result
+  until: mongodb_ping_result.stdout == "1"
+  retries: "{{ mongodb_config['global']['status_check_retries'] }}"
+  delay: "{{ mongodb_config['global']['status_check_delay'] }}"
+  when:
+    - mongo_node_role is defined and mongo_node_role == "master"
+    - (mongodb_security is defined and mongodb_security == "disabled") or (mongodb_security is not defined) or (mongodb_safe_mode is defined and mongodb_safe_mode == true) 
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+######################
+###      HOST      ###
+######################
+- name: restart_mongodb_host_auth
+  systemd:
+    name: mongod
+    state: restarted
+    enabled: yes
+  notify: "ping_mongodb_host_auth"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - (mongodb_safe_mode is defined and mongodb_safe_mode == false) or (mongodb_safe_mode is not defined)
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
+
+- name: restart_mongodb_host_no_auth
+  systemd:
+    name: mongod
+    state: restarted
+    enabled: yes
+  notify: "ping_mongodb_host_no_auth"
+  when:
+    - (mongodb_security is defined and mongodb_security == "disabled") or (mongodb_security is not defined) and (mongodb_safe_mode is defined and mongodb_safe_mode == true) 
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
+
+- name: ping_mongodb_host_auth
+  shell: "mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"db.runCommand('ping').ok\""
+  register: mongodb_ping_result
+  until: mongodb_ping_result.stdout == "1"
+  retries: "{{ mongodb_config['global']['status_check_retries'] }}"
+  delay: "{{ mongodb_config['global']['status_check_delay'] }}"
+  when:
+    - mongo_node_role is defined and mongo_node_role == "master"
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - (mongodb_safe_mode is defined and mongodb_safe_mode == false) or (mongodb_safe_mode is not defined)
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
+
+- name: ping_mongodb_host_no_auth
+  shell: "mongo --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"db.runCommand('ping').ok\""
+  register: mongodb_ping_result
+  until: mongodb_ping_result.stdout == "1"
+  retries: "{{ mongodb_config['global']['status_check_retries'] }}"
+  delay: "{{ mongodb_config['global']['status_check_delay'] }}"
+  when:
+    - mongo_node_role is defined and mongo_node_role == "master"
+    - (mongodb_security is defined and mongodb_security == "disabled") or (mongodb_security is not defined) or (mongodb_safe_mode is defined and mongodb_safe_mode == true) 
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
