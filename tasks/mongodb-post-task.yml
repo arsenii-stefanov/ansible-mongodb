@@ -2,7 +2,7 @@
 
 - name: MONGODB POST INSTALLATION TASK | Get the Master Node [Docker]
   shell: "docker exec -i {{ mongodb_config['docker_opts']['container_name'] }} mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
-  register: mongodb_master
+  register: mongodb_master_docker
   run_once: true
   when:
     - mongodb_security is defined and mongodb_security == "enabled"
@@ -11,7 +11,7 @@
 
 - name: MONGODB POST INSTALLATION TASK | Get the Master Node [Host]
   shell: "mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
-  register: mongodb_master
+  register: mongodb_master_host
   run_once: true
   when:
     - mongodb_security is defined and mongodb_security == "enabled"
@@ -19,8 +19,18 @@
     - mongodb_installation_type == "host"
 
 - set_fact:
-    mongodb_master_address: "{{ mongodb_master.stdout }}"
-  when: mongodb_master is defined
+    mongodb_master_address: "{{ mongodb_master_docker.stdout }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+- set_fact:
+    mongodb_master_address: "{{ mongodb_master_host.stdout }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
 
 - name: MONGODB POST INSTALLATION TASK | Create Users [Node FQDN Address]
   mongodb_user:
