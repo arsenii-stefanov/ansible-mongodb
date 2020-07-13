@@ -1,0 +1,63 @@
+---
+
+- name: MONGODB POST INSTALLATION TASK | Get the Master Node [Docker]
+  shell: "docker exec -i {{ mongodb_config['docker_opts']['container_name'] }} mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
+  register: mongodb_master
+  run_once: true
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+- name: MONGODB POST INSTALLATION TASK | Get the Master Node [Host]
+  shell: "mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
+  register: mongodb_master
+  run_once: true
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
+
+- set_fact:
+    mongodb_master_address: "{{ mongodb_master.stdout }}"
+  when: mongodb_master is defined
+
+- name: MONGODB POST INSTALLATION TASK | Create Users [Node FQDN Address]
+  mongodb_user:
+    database: "{{ item.database }}"
+    login_host: "{{ mongodb_login_host }}"
+    login_port: "{{ mongodb_login_port }}"
+    login_user: "{{ mongodb_secret_vars['admin_user'] }}"
+    login_password: "{{ mongodb_secret_vars['admin_password'] }}"
+    user: "{{ item.user }}"
+    password: "{{ item.password }}"
+    roles: "{{ item.roles }}"
+    state: present
+  no_log: true
+  changed_when: false
+  with_items: "{{ mongodb_users }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_master_address is defined
+    - mongodb_replica_set_use_dns is defined and mongodb_replica_set_use_dns == true
+    - 'inventory_hostname in mongodb_master_address'
+
+- name: MONGODB POST INSTALLATION TASK | Create Users [Node IP Address]
+  mongodb_user:
+    database: "{{ item.database }}"
+    login_host: "{{ mongodb_login_host }}"
+    login_port: "{{ mongodb_login_port }}"
+    login_user: "{{ mongodb_secret_vars['admin_user'] }}"
+    login_password: "{{ mongodb_secret_vars['admin_password'] }}"
+    user: "{{ item.user }}"
+    password: "{{ item.password }}"
+    roles: "{{ item.roles }}"
+    state: present
+  no_log: true
+  changed_when: false
+  with_items: "{{ mongodb_users }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_master_address is defined
+    - (mongodb_replica_set_use_dns is defined and mongodb_replica_set_use_dns == false) or mongodb_replica_set_use_dns is not defined
+    - 'ansible_host in mongodb_master_address'

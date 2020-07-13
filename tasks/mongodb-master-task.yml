@@ -79,18 +79,3 @@
 
 - name: MONGODB MASTER | Restart MongoDB
   meta: flush_handlers
-
-- name: MONGODB MASTER TASK | Create Users
-  mongodb_user:
-    database: "{{ item.database }}"
-    login_host: "{{ mongodb_login_host }}"
-    login_port: "{{ mongodb_login_port }}"
-    login_user: "{{ mongodb_secret_vars['admin_user'] }}"
-    login_password: "{{ mongodb_secret_vars['admin_password'] }}"
-    user: "{{ item.user }}"
-    password: "{{ item.password }}"
-    roles: "{{ item.roles }}"
-    state: present
-  no_log: true
-  changed_when: false
-  with_items: "{{ mongodb_users }}"

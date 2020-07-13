@@ -25,3 +25,7 @@
     - mongodb_replica_set_name is defined and mongodb_replica_set_name != ""
     - mongodb_security is defined and mongodb_security == "enabled"
   tags: [always]
+
+- name: Include MongoDB Post Installation Task
+  include_tasks: mongodb-post-task.yml
+  tags: [always]
