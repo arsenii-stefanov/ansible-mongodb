@@ -27,7 +27,7 @@
   retries: "{{ mongodb_config['global']['status_check_retries'] }}"
   delay: "{{ mongodb_config['global']['status_check_delay'] }}"
   when:
-    - mongo_node_role is defined and mongo_node_role == "master"
+    - mongo_node_master is defined and mongo_node_master == true
     - mongodb_security is defined and mongodb_security == "enabled"
     - (mongodb_safe_mode is defined and mongodb_safe_mode == false) or (mongodb_safe_mode is not defined)
     - mongodb_installation_type is defined
@@ -40,7 +40,7 @@
   retries: "{{ mongodb_config['global']['status_check_retries'] }}"
   delay: "{{ mongodb_config['global']['status_check_delay'] }}"
   when:
-    - mongo_node_role is defined and mongo_node_role == "master"
+    - mongo_node_master is defined and mongo_node_master == true
     - (mongodb_security is defined and mongodb_security == "disabled") or (mongodb_security is not defined) or (mongodb_safe_mode is defined and mongodb_safe_mode == true) 
     - mongodb_installation_type is defined
     - mongodb_installation_type == "docker"
@@ -78,7 +78,7 @@
   retries: "{{ mongodb_config['global']['status_check_retries'] }}"
   delay: "{{ mongodb_config['global']['status_check_delay'] }}"
   when:
-    - mongo_node_role is defined and mongo_node_role == "master"
+    - mongo_node_master is defined and mongo_node_master == true
     - mongodb_security is defined and mongodb_security == "enabled"
     - (mongodb_safe_mode is defined and mongodb_safe_mode == false) or (mongodb_safe_mode is not defined)
     - mongodb_installation_type is defined
@@ -91,7 +91,7 @@
   retries: "{{ mongodb_config['global']['status_check_retries'] }}"
   delay: "{{ mongodb_config['global']['status_check_delay'] }}"
   when:
-    - mongo_node_role is defined and mongo_node_role == "master"
+    - mongo_node_master is defined and mongo_node_master == true
     - (mongodb_security is defined and mongodb_security == "disabled") or (mongodb_security is not defined) or (mongodb_safe_mode is defined and mongodb_safe_mode == true) 
     - mongodb_installation_type is defined
     - mongodb_installation_type == "host"

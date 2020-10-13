@@ -2,14 +2,14 @@
 
 - name: MONGODB REPLICASET TASK | Get the List of All Node IPs in the ReplicaSet
   set_fact:
-    # List 'hostvars' for all hosts in this play and get their 'ansible_host' 
-    mongodb_node_list: "{{ ansible_play_hosts_all | map('extract', hostvars, ['ansible_host']) | map('regex_replace', '(.*)', '\\1:{{ mongodb_host_port }}') | list }}"
+    # List 'hostvars' for all hosts in this play and get their 'ansible_host'
+    mongodb_node_list: "{{ ansible_play_hosts_all | map('extract', hostvars, ['ansible_host']) | map('regex_replace', '^(.*)$', '\\1:{{ mongodb_host_port }}') | list }}"
   when: (mongodb_replica_set_use_dns is defined and mongodb_replica_set_use_dns == false) or (mongodb_replica_set_use_dns is not defined)
 
 - name: MONGODB REPLICASET TASK | Get the List of All Node DNS Names in the ReplicaSet
   set_fact:
     # List 'hostvars' for all hosts in this play and get their 'mongodb_node_dns_name'
-    mongodb_node_list: "{{ ansible_play_hosts_all | map('extract', hostvars, ['mongodb_node_dns_name']) | map('regex_replace', '(.*)', '\\1:{{ mongodb_host_port }}') | list }}"
+    mongodb_node_list: "{{ ansible_play_hosts_all | map('extract', hostvars, ['mongodb_node_dns_name']) | map('regex_replace', '^(.*)$', '\\1:{{ mongodb_host_port }}') | list }}"
   when: mongodb_replica_set_use_dns is defined and mongodb_replica_set_use_dns == true
 
 - name: MONGODB REPLICASET TASK | List All Nodes in the ReplicaSet
