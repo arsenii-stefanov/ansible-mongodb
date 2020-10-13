@@ -12,6 +12,13 @@ storage:
   engine: {{ mongodb_engine }}
   journal:
     enabled: true
+{% if mongodb_engine == "wiredTiger" and ( mongodb_engine_config is defined and mongodb_engine_config != "" ) %}
+  wiredTiger:
+      engineConfig:
+{% if mongodb_engine_config.cache_size_gb is defined and mongodb_engine_config.cache_size_gb != "" %}
+         cacheSizeGB: {{ mongodb_engine_config.cache_size_gb }}
+{% endif %}
+{% endif %}
 net:
   port: {{ mongodb_bind_port }}
   bindIp: {{ mongodb_bind_ip }}
