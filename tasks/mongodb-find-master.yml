@@ -1,0 +1,46 @@
+---
+
+- name: MONGODB FIND MASTER TASK | Get the Master Node [Docker]
+  shell: "docker exec -i {{ mongodb_config['docker_opts']['container_name'] }} mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
+  register: mongodb_master_docker
+  ignore_errors: true
+  no_log: true
+  retries: "{{ mongodb_config['global']['status_check_retries'] }}"
+  delay: "{{ mongodb_config['global']['status_check_delay'] }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+- name: MONGODB FIND MASTER TASK | Get the Master Node [Host]
+  shell: "mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
+  register: mongodb_master_host
+  ignore_errors: true
+  no_log: true
+  retries: "{{ mongodb_config['global']['status_check_retries'] }}"
+  delay: "{{ mongodb_config['global']['status_check_delay'] }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
+
+- name: MONGODB FIND MASTER TASK | Set Master Address [Docker]
+  set_fact:
+    mongodb_master_address: "{{ mongodb_master_docker.stdout }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "docker"
+
+- name: MONGODB FIND MASTER TASK | Set Master Address [Host]
+  set_fact:
+    mongodb_master_address: "{{ mongodb_master_host.stdout }}"
+  when:
+    - mongodb_security is defined and mongodb_security == "enabled"
+    - mongodb_installation_type is defined
+    - mongodb_installation_type == "host"
+
+- name: MONGODB FIND MASTER TASK | Define Master
+  set_fact:
+    mongo_node_master: true
+  when: "inventory_hostname in mongodb_master_address"

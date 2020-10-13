@@ -13,48 +13,18 @@
   include_tasks: "mongodb-{{ mongodb_installation_type }}.yml"
   tags: [always]
 
-- name: MAIN TASK | Get the Master Node [Docker]
-  shell: "docker exec -i {{ mongodb_config['docker_opts']['container_name'] }} mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
-  register: mongodb_master_docker
-  ignore_errors: true
-  when:
-    - mongodb_security is defined and mongodb_security == "enabled"
-    - mongodb_installation_type is defined
-    - mongodb_installation_type == "docker"
-
-- name: MAIN TASK | Get the Master Node [Host]
-  shell: "mongo -u {{ mongodb_secret_vars['admin_user'] }} -p{{ mongodb_secret_vars['admin_password'] }} --host {{ mongodb_login_host }} --port {{ mongodb_login_port }} --quiet --eval \"rs.isMaster().primary\""
-  register: mongodb_master_host
-  ignore_errors: true
-  when:
-    - mongodb_security is defined and mongodb_security == "enabled"
-    - mongodb_installation_type is defined
-    - mongodb_installation_type == "host"
-
-- name: MAIN TASK | Set Master Address [Docker]
-  set_fact:
-    mongodb_master_address: "{{ mongodb_master_docker.stdout }}"
-  when:
-    - mongodb_security is defined and mongodb_security == "enabled"
-    - mongodb_installation_type is defined
-    - mongodb_installation_type == "docker"
-
-- name: MAIN TASK | Set Master Address [Host]
-  set_fact:
-    mongodb_master_address: "{{ mongodb_master_host.stdout }}"
-  when:
-    - mongodb_security is defined and mongodb_security == "enabled"
-    - mongodb_installation_type is defined
-    - mongodb_installation_type == "host"
-
-- name: MAIN TASK | Define Master
-  set_fact:
-    mongo_node_master: true
-  when: "inventory_hostname in mongodb_master_address"
+- name: Include MongoDB Find Master Task
+  include_tasks: "mongodb-find-master.yml"
+  tags: [always]
 
 - name: Include MongoDB Master Task
   include_tasks: mongodb-master-task.yml
   when: mongo_node_master is defined and mongo_node_master == true
+  tags: [always]
+
+### Find the master again in case it changed after a previous restart
+- name: Include MongoDB Find Master Task
+  include_tasks: "mongodb-find-master.yml"
   tags: [always]
 
 - name: Include MongoDB ReplicaSet Task
@@ -64,7 +34,6 @@
     - mongodb_replica_set_name is defined and mongodb_replica_set_name != ""
     - mongodb_security is defined and mongodb_security == "enabled"
   tags: [always]
-
 
 ### If Master is not found
 - name: Include MongoDB Master Task
@@ -80,6 +49,11 @@
     - (mongodb_master_address is defined and mongodb_master_address == "") or (mongodb_master_address is not defined)
     - mongodb_replica_set_name is defined and mongodb_replica_set_name != ""
     - mongodb_security is defined and mongodb_security == "enabled"
+
+### Find the master again in case it changed after a previous restart
+- name: Include MongoDB Find Master Task
+  include_tasks: "mongodb-find-master.yml"
+  tags: [always]
 
 - name: Include MongoDB Post Installation Task
   include_tasks: mongodb-post-task.yml
