@@ -15,7 +15,7 @@ mongodb_host_ip: "{{ mongodb_bind_ip }}"
 mongodb_login_host: "127.0.0.1"
 mongodb_login_port: "{{ mongodb_host_port }}"
 
-# MONGODB FILES AND DIRECTORIES
+### MONGODB FILES AND DIRECTORIES
 mongodb_main_host_dir: "{{ mongodb_main_mount_dir }}/mongodb"
 mongodb_config_host_dir: "{{ mongodb_main_host_dir }}/config"
 mongodb_certs_host_dir: "{{ mongodb_main_host_dir }}/certificates"
@@ -87,7 +87,7 @@ mongodb_files: [
     }
 ]
 
-# SSL CERTIFICATES
+### SSL CERTIFICATES
 mongodb_root_ca_cert_name: "ca.crt"
 mongodb_root_ca_key_name: "ca.key"
 mongodb_node_csr_name: "{{ inventory_hostname }}.csr"
@@ -96,7 +96,7 @@ mongodb_node_key_name: "{{ inventory_hostname }}.key"
 mongodb_node_cert_key_template: "mongodb/certificates/mongodb_node_cert_key.pem.j2"
 mongodb_node_cert_key_name: "{{ inventory_hostname }}.pem"
 
-# Shell command for generating a Root CA and key: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out root-ca.pem -days 3650 -nodes -subj "/C=US/ST=NY/L=NewYork/O=MyOrganization/OU=IT/CN=mongodb.local/emailAddress=admin@mongodb.local"
+### Shell command for generating a Root CA and key: openssl req -x509 -newkey rsa:4096 -keyout key.pem -out root-ca.pem -days 3650 -nodes -subj "/C=US/ST=NY/L=NewYork/O=MyOrganization/OU=IT/CN=mongodb.local/emailAddress=admin@mongodb.local"
 
 mongodb_openssl_csr:
   common_name: "mongodb.local"
@@ -114,12 +114,15 @@ mongodb_openssl_csr:
 mongodb_version: "4.2"
 mongodb_docker_network: "mongodb"
 mongodb_engine: "wiredTiger"        # wiredTiger / inMemory
-# disabled / allowTLS / preferTLS / requireTLS
+### wiredTiger engine config
+# mongodb_engine_config:
+#   cache_size_gb: "1"
+### disabled / allowTLS / preferTLS / requireTLS
 mongodb_tls_mode: "preferTLS"    # Connections between servers use TLS. For incoming connections, the server accepts both TLS and non-TLS
 mongodb_security: "enabled"
 mongodb_command: "--config {{ mongodb_config_container_dir }}/{{ mongodb_main_config }}"
 
-# MONGODB REPLICASET
+### MONGODB REPLICASET
 mongodb_replica_set_name: "mongodb"        # define the 'mongodb_replica_set_name' to run MongoDB as a replicaSet
 mongodb_replica_set_use_dns: false
 #mongodb_node_dns_name: ""        # feel free to set this variable in your 'vars' file or 'inventory' file
